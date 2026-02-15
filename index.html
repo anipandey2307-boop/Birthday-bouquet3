@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Birthday Surprise 🎂</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Quicksand:wght@300;500&display=swap');
+
+        body {
+            background: radial-gradient(circle at center, #fff5f7 0%, #ffe4e9 100%);
+            font-family: 'Quicksand', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .cursive {
+            font-family: 'Dancing Script', cursive;
+        }
+
+        /* Removed hover scaling to keep flowers stationary */
+        .flower-container {
+            cursor: pointer;
+            pointer-events: all;
+        }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-content {
+            transform: scale(0.8);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .show-modal {
+            display: flex;
+            opacity: 1;
+        }
+
+        .show-modal .modal-content {
+            transform: scale(1);
+        }
+
+        .sparkle {
+            position: absolute;
+            pointer-events: none;
+            animation: sparkleAnim 2s linear infinite;
+        }
+
+        @keyframes sparkleAnim {
+            0% { transform: scale(0) rotate(0deg); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: scale(1.5) rotate(180deg); opacity: 0; }
+        }
+
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4">
+
+    <div class="text-center mb-8 z-10">
+        <h1 class="text-5xl md:text-6xl cursive text-pink-600 mb-2">Happy Birthday Bhabhi!</h1>
+        <p class="text-pink-400 font-medium">Click on a flower to reveal a special memory</p>
+    </div>
+
+    <!-- Main Bouquet Area -->
+    <div class="relative w-full max-w-lg aspect-[3/4] floating">
+        <svg viewBox="0 0 400 500" class="w-full h-full drop-shadow-2xl" id="bouquet-svg">
+            <defs>
+                <linearGradient id="roseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#ff4d6d" />
+                    <stop offset="100%" style="stop-color:#800f2f" />
+                </linearGradient>
+                <linearGradient id="leafGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:#70e000" />
+                    <stop offset="100%" style="stop-color:#004b23" />
+                </linearGradient>
+            </defs>
+            <path d="M100 450 L200 500 L300 450 L380 200 L20 200 Z" fill="#fff" stroke="#fce7f3" stroke-width="2" />
+            <path d="M200 500 L20 200 L120 180 Z" fill="#fdf2f8" opacity="0.8" />
+            <path d="M200 500 L380 200 L280 180 Z" fill="#fdf2f8" opacity="0.8" />
+            <g id="stems-layer"></g>
+            <g id="foliage-layer"></g>
+            <g id="flowers-layer"></g>
+            <g transform="translate(200, 420)">
+                <path d="M-30 -10 Q-50 -30 -20 -30 Q0 -30 0 -10 L0 10 Q0 30 -20 30 Q-50 30 -30 10 Z" fill="#fb7185" />
+                <path d="M30 -10 Q50 -30 20 -30 Q0 -30 0 -10 L0 10 Q0 30 20 30 Q50 30 30 10 Z" fill="#fb7185" />
+                <circle r="8" fill="#f43f5e" />
+            </g>
+        </svg>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="image-modal" class="modal-overlay" onclick="closeModal()">
+        <div class="modal-content relative bg-white p-4 rounded-2xl shadow-2xl max-w-sm mx-4" onclick="event.stopPropagation()">
+            <button onclick="closeModal()" class="absolute -top-4 -right-4 bg-pink-500 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:bg-pink-600">✕</button>
+            <div id="modal-image-container" class="rounded-xl overflow-hidden aspect-square bg-pink-50 flex items-center justify-center mb-4 relative">
+                <img id="reveal-img" src="" alt="Birthday Memory" class="w-full h-full object-contain hidden">
+
+                <div id="reveal-placeholder" class="text-center p-6 text-pink-500">
+                    <p class="text-4xl mb-2 animate-bounce">✨</p>
+                    <p class="cursive text-2xl" id="reveal-text">Loading your surprise...</p>
+                </div>
+            </div>
+            <p id="flower-desc" class="text-center text-gray-600 italic"></p>
+        </div>
+    </div>
+
+    <script>
+        const flowersLayer = document.getElementById('flowers-layer');
+        const stemsLayer = document.getElementById('stems-layer');
+        const foliageLayer = document.getElementById('foliage-layer');
+        const modal = document.getElementById('image-modal');
+        const revealImg = document.getElementById('reveal-img');
+        const revealText = document.getElementById('reveal-text');
+        const flowerDesc = document.getElementById('flower-desc');
+        const placeholder = document.getElementById('reveal-placeholder');
+
+        // Note: I've added 10 unique entries so every flower in the bouquet has its own content.
+        const flowerTypes = [
+            { type: 'rose', color: '#f472b6', name: 'Pink Rose', msg: 'memory for your special day.', img: 'https://res.cloudinary.com/dkbrm2slu/image/upload/v1771155625/img5_x7ukqp.jpg' },
+            { type: 'sunflower', color: '#dc2626', name: 'Red Sunflower', msg: 'the most contagious smile!', img: 'https://res.cloudinary.com/dkbrm2slu/image/upload/v1771155598/img8_ncusiw.jpg' },
+            { type: 'rose', color: '#ec4899', name: 'Deep Pink Rose', msg: 'Celebrating the joy you bring.', img: 'https://res.cloudinary.com/dkbrm2slu/image/upload/v1771155597/img6_s79bns.jpg' },
+            { type: 'sunflower', color: '#991b1b', name: 'Crimson Sunflower', msg: 'Wishing you a happy and beautiful year.', img: 'https://res.cloudinary.com/dkbrm2slu/image/upload/v1771155597/img7_mswwxp.jpg' },
+            { type: 'sakura', color: '#fecdd3', name: 'Cherry Blossom', msg: 'May your year be as beautiful as you.', img: 'https://res.cloudinary.com/dkbrm2slu/image/upload/v1771155594/img9_ihrpkr.jpg' },
+            { type: 'rose', color: '#fb7185', name: 'Blush Rose', msg: 'A memory as sweet as a rose.', img: 'https://res.cloudinary.com/dkbrm2slu/image/upload/v1771155597/img2_tkqjya.jpg' },
+            { type: 'sunflower', color: '#ea580c', name: 'Golden Bloom', msg: 'Radiating brightness everywhere you go.', img: 'https://res.cloudinary.com/dkbrm2slu/image/upload/v1771156217/img3_u2yorb.jpg' },
+            { type: 'rose', color: '#db2777', name: 'Magenta Petal', msg: 'Pretty colors for a pretty personality!', img: 'https://res.cloudinary.com/dkbrm2slu/image/upload/v1771156217/img1_qde2lp.jpg' },
+            { type: 'sakura', color: '#ffe4e6', name: 'Pale Sakura', msg: 'Filling every moment with light', img: 'https://res.cloudinary.com/dkbrm2slu/image/upload/v1771156217/img4_wzdydd.jpg' },
+            { type: 'sunflower', color: '#facc15', name: 'Classic Sunflower', msg: 'Keep being youu!', img: 'https://res.cloudinary.com/dkbrm2slu/image/upload/v1771156420/WhatsApp_Image_2026-02-15_at_17.23.15_euguhy.jpg' }
+        ];
+
+        function createAttachedLeaf(stemX1, stemY1, stemX2, stemY2) {
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            const ratio = 0.3 + Math.random() * 0.4;
+            const attachX = stemX1 + (stemX2 - stemX1) * ratio;
+            const attachY = stemY1 + (stemY2 - stemY1) * ratio;
+            const side = Math.random() > 0.5 ? 1 : -1;
+            const angle = side === 1 ? -30 + Math.random() * -40 : 30 + Math.random() * 40;
+            const scale = 0.5 + Math.random() * 0.4;
+            g.setAttribute("transform", `translate(${attachX}, ${attachY}) rotate(${angle}) scale(${scale})`);
+            g.innerHTML = `<path d="M0 0 Q20 -15 40 0 Q20 15 0 0" fill="url(#leafGrad)" opacity="0.8" />`;
+            return g;
+        }
+
+        function createFlower(typeObj, x, y, scale) {
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            g.setAttribute("transform", `translate(${x}, ${y}) scale(${scale})`);
+            g.classList.add('flower-container');
+            
+            let petals = "";
+            const c = typeObj.color;
+
+            switch(typeObj.type) {
+                case 'rose':
+                    petals = `
+                        <circle r="20" fill="${c}" />
+                        <path d="M-15 -15 Q0 -25 15 -15 Q25 0 15 15 Q0 25 -15 15 Q-25 0 -15 -15" fill="${c}" />
+                        <path d="M-10 -10 Q0 -15 10 -10 Q15 0 10 10 Q0 15 -10 10 Q-15 0 -10 -10" fill="white" opacity="0.3" />
+                        <circle r="5" fill="${c}" filter="brightness(0.8)" />`;
+                    break;
+                case 'sunflower':
+                    for(let i=0; i<12; i++) petals += `<ellipse rx="5" ry="20" fill="${c}" transform="rotate(${i*30})" />`;
+                    petals += `<circle r="10" fill="#451a03" />`;
+                    break;
+                case 'sakura':
+                    for(let i=0; i<5; i++) petals += `<path d="M0 0 Q-10 -20 0 -25 Q10 -20 0 0" fill="${c}" transform="rotate(${i*72})" />`;
+                    petals += `<circle r="3" fill="#f43f5e" />`;
+                    break;
+            }
+
+            g.innerHTML = petals;
+            g.onclick = () => showImage(typeObj);
+            return g;
+        }
+
+        function createStem(x, y) {
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", x);
+            line.setAttribute("y1", y);
+            line.setAttribute("x2", 200);
+            line.setAttribute("y2", 480);
+            line.setAttribute("stroke", "#14532d");
+            line.setAttribute("stroke-width", "3");
+            line.setAttribute("opacity", "0.7");
+            return line;
+        }
+
+        function initBouquet() {
+            const stems = [];
+            // We use 10 flowers. Each index 'i' now pulls a unique entry from the expanded flowerTypes array.
+            for(let i=0; i<10; i++) {
+                const angle = (i / 10) * Math.PI * 1.3 + Math.PI * 0.85;
+                const dist = 60 + Math.random() * 70;
+                const x = 200 + Math.cos(angle) * dist;
+                const y = 230 + Math.sin(angle) * dist * 0.7;
+                
+                // Pull from flowerTypes[i] so each flower 0-9 has a unique image data object
+                const type = flowerTypes[i]; 
+                
+                const scale = 0.9 + Math.random() * 0.2;
+                stemsLayer.appendChild(createStem(x, y));
+                flowersLayer.appendChild(createFlower(type, x, y, scale));
+                stems.push({ x1: x, y1: y, x2: 200, y2: 480 });
+            }
+            for(let i=0; i<18; i++) {
+                const stem = stems[i % stems.length];
+                foliageLayer.appendChild(createAttachedLeaf(stem.x1, stem.y1, stem.x2, stem.y2));
+            }
+        }
+
+        function showImage(flower) {
+            revealImg.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            revealText.innerText = "Loading Surprise...";
+            revealImg.src = flower.img;
+            revealImg.onload = () => {
+                revealImg.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                revealText.innerText = flower.msg;
+            };
+            revealImg.onerror = () => {
+                revealImg.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                revealText.innerText = flower.msg; 
+            };
+            flowerDesc.innerText = `Happy birthday bhabhiiii!!`;
+            modal.classList.add('show-modal');
+            createSparkles();
+        }
+
+        function closeModal() {
+            modal.classList.remove('show-modal');
+        }
+
+        function createSparkles() {
+            for(let i=0; i<15; i++) {
+                setTimeout(() => {
+                    const sparkle = document.createElement('div');
+                    sparkle.className = 'sparkle';
+                    sparkle.innerHTML = '✨';
+                    sparkle.style.left = Math.random() * 100 + 'vw';
+                    sparkle.style.top = Math.random() * 100 + 'vh';
+                    sparkle.style.fontSize = (Math.random() * 20 + 10) + 'px';
+                    document.body.appendChild(sparkle);
+                    setTimeout(() => sparkle.remove(), 2000);
+                }, i * 100);
+            }
+        }
+
+        window.onload = initBouquet;
+    </script>
+</body>
+</html>
